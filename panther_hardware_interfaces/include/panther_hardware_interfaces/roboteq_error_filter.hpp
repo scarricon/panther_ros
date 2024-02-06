@@ -73,15 +73,19 @@ public:
    * threshold error is set
    */
   void UpdateError(const ErrorsFilterIds id, const bool current_error);
+
   /**
-   * @brief Sets clear errors flag - errors will be cleared upon the next Update (any) method.
+   * @brief Sets clear errors flag - errors will be cleared upon calling ClearErrorsIfFlagSet.
    * This makes sure that the operation is multithread-safe.
    */
   void SetClearErrorsFlag() { clear_errors_.store(true); }
 
-private:
+  /**
+   * @brief Clears errors if clear error flag was set previously.
+   */
   void ClearErrorsIfFlagSet();
 
+private:
   std::atomic_bool clear_errors_ = false;
 
   std::map<ErrorsFilterIds, ErrorFilter> error_filters_;

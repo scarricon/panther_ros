@@ -257,6 +257,7 @@ return_type PantherSystem::read(const rclcpp::Time & time, const rclcpp::Duratio
 return_type PantherSystem::write(
   const rclcpp::Time & /* time */, const rclcpp::Duration & /* period */)
 {
+  roboteq_error_filter_->ClearErrorsIfFlagSet();
   last_commands_zero_ = AreVelocityCommandsNearZero();
 
   try {

@@ -64,7 +64,6 @@ bool RoboteqErrorFilter::IsError() const
 
 void RoboteqErrorFilter::UpdateError(const ErrorsFilterIds id, const bool current_error)
 {
-  ClearErrorsIfFlagSet();
   error_filters_.at(id).UpdateError(current_error);
 }
 
