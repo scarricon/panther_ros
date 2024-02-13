@@ -7,14 +7,15 @@
   <xacro:arg name="imu_pos_x" default="0.169" />
   <xacro:arg name="imu_pos_y" default="0.025" />
   <xacro:arg name="imu_pos_z" default="0.092" />
-  <xacro:arg name="imu_rot_r" default="0.0" />
-  <xacro:arg name="imu_rot_p" default="0.0" />
-  <xacro:arg name="imu_rot_y" default="-1.57" />
+  <xacro:arg name="imu_rot_r" default="3.14" />
+  <xacro:arg name="imu_rot_p" default="-1.57" />
+  <xacro:arg name="imu_rot_y" default="0.0" />
+  <xacro:arg name="use_arm" default="true" />
   <xacro:arg name="simulation_engine" default="ignition-gazebo" />
   <xacro:arg name="wheel_config_file"
-    default="$(find panther_description)/config/WH01.yaml" />
+    default="$(find panther_description)/config/custom.yaml" />
   <xacro:arg name="controller_config_file"
-    default="$(find panther_controller)/config/WH01_controller.yaml" />
+    default="$(find panther_controller)/config/custom_controller.yaml" />
   <xacro:arg name="battery_config_file"
     default="$(find panther_description)/config/battery_ign_plugin.yaml" />
 
@@ -33,4 +34,84 @@
     controller_config_file="$(arg controller_config_file)"
     battery_config_file="$(arg battery_config_file)" />
 
+  <xacro:include filename="$(find ros_components_description)/urdf/slamtec_rplidar_s2e.urdf.xacro"
+    ns="lidar" />
+  <xacro:lidar.slamtec_rplidar_s2e
+    parent_link="body_link"
+    xyz="0.120 0.0 -0.0505"
+    rpy="3.14 0.0 3.14"
+    use_gpu="true"
+    simulation_engine="$(arg simulation_engine)" />
+    
+  <xacro:include filename="$(find ros_components_description)/urdf/velodyne_puck.urdf.xacro"
+    ns="velodyne" />
+  <xacro:velodyne.velodyne_puck 
+      parent_link="base_link" 
+      xyz="0.4318 0.0 0.6477"
+      rpy="0.0 0.0 0.0"
+      use_gpu="true"
+      topic="velodyne_points"
+      simulation_engine="$(arg simulation_engine)"  />
+  
+    <!-- Antenna for GPS -->
+  <xacro:include filename="$(find panther_description)/urdf/components/external_antenna.urdf.xacro" ns="antenna" />
+  <xacro:antenna.external_antenna
+    parent_link="base_link"
+    xyz="0.00 0.0 0.640"
+    rpy="0.0 0.0 0.0" />
+  
+  <joint name="base_to_gps_joint" type="fixed">
+      <origin xyz="-0.433 0.0 0.13925"
+        rpy="0.0 0.0 0.0" />
+      <parent link="gps_link" />
+      <child link="base_link" />
+  </joint>
+  <link name="gps_link" />  
+    
+    <!-- UR5e arm + Wand Assembly -->
+    <xacro:property name="use_arm" value="$(arg use_arm)" />
+    <xacro:if value="${use_arm}">
+      <xacro:include filename="$(find panther_description)/urdf/mounting_plate.urdf.xacro" ns="mounting_plate" />
+      <xacro:mounting_plate.mounting_plate 
+        parent_link="base_link"
+        xyz="-0.381 0.152 0.477"
+        rpy="0.0 0.0 0.0" />
+
+      <xacro:include filename="$(find panther_description)/urdf/wand.urdf.xacro" ns="icon"/>
+      <xacro:icon.wand
+        parent_link="panther_ur5e_wrist_3_link"
+        xyz="0.0 0.0 0.03"
+        rpy="${-pi/2} 0.0 ${pi}"/>
+  
+      
+      <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro" ns="universal_robot"/>
+      <xacro:arg name="arm_name" default="ur"/>
+      <xacro:arg name="ur_type" default="ur5e"/>
+      <xacro:arg name="tf_prefix" default="panther_ur5e_" />
+      <xacro:arg name="joint_limit_params" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+      <xacro:arg name="kinematics_params" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+      <xacro:arg name="physical_params" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
+      <xacro:arg name="visual_params" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+      <xacro:arg name="transmission_hw_interface" default=""/>
+      <xacro:arg name="safety_limits" default="false"/>
+      <xacro:arg name="safety_pos_margin" default="0.15"/>
+      <xacro:arg name="safety_k_position" default="20"/>
+
+      <xacro:universal_robot.ur_robot
+        name="$(arg arm_name)"
+        tf_prefix="$(arg tf_prefix)"
+        parent="ur_mounting_plate_link"
+        joint_limits_parameters_file="$(arg joint_limit_params)"
+        kinematics_parameters_file="$(arg kinematics_params)"
+        physical_parameters_file="$(arg physical_params)"
+        visual_parameters_file="$(arg visual_params)"
+        safety_limits="$(arg safety_limits)"
+        safety_pos_margin="$(arg safety_pos_margin)"
+        safety_k_position="$(arg safety_k_position)"
+        >
+        <origin xyz="0 0 0" rpy="0 0 ${-pi/2}" /> 
+      </xacro:universal_robot.ur_robot>
+    </xacro:if>
+  
 </robot>
+

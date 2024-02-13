@@ -2,7 +2,7 @@
 
 # Enables battery simulation. If set to true, the battery will discharge,
 # and if it depletes completely, the robot will stop moving.
-simulate_discharging: false
+simulate_discharging: true
 
 # Sets the initial charge percentage of the battery.
 initial_charge_percentage: 70.0

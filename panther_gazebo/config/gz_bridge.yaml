@@ -19,3 +19,25 @@
   ros_type_name: "geometry_msgs/msg/Twist"
   gz_type_name: "ignition.msgs.Twist"
   direction: GZ_TO_ROS
+
+- ros_topic_name: "velodyne/scan"
+  gz_topic_name: "velodyne_points"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "ignition.msgs.LaserScan"
+  subscriber_queue: 10
+  publisher_queue: 10
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "rplidar/scan"
+  gz_topic_name: "scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "ignition.msgs.LaserScan"
+  subscriber_queue: 10
+  publisher_queue: 10
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "gps/fix"
+  gz_topic_name: "world/dome_world/model/panther/link/gps_link/sensor/navsat/navsat"
+  ros_type_name: "sensor_msgs/msg/NavSatFix"
+  gz_type_name: "ignition.msgs.NavSat"
+  direction: GZ_TO_ROS

@@ -16,7 +16,7 @@
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription,TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
@@ -30,14 +30,14 @@ def generate_launch_description():
     wheel_type = LaunchConfiguration("wheel_type")
     declare_wheel_type_arg = DeclareLaunchArgument(
         "wheel_type",
-        default_value="WH01",
+        default_value="custom",
         description=(
             "Specify the type of wheel. If you select a value from the provided options ('WH01',"
             " 'WH02', 'WH04'), you can disregard the 'wheel_config_path' and"
             " 'controller_config_path' parameters. If you have custom wheels, set this parameter"
             " to 'CUSTOM' and provide the necessary configurations."
         ),
-        choices=["WH01", "WH02", "WH04", "CUSTOM"],
+        choices=["WH01", "WH02", "WH04", "custom"],
     )
 
     wheel_config_path = LaunchConfiguration("wheel_config_path")
@@ -110,9 +110,9 @@ def generate_launch_description():
             "-r ",
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("husarion_office_gz"),
+                    get_package_share_directory("icon_sites_gz"),
                     "worlds",
-                    "husarion_world.sdf",
+                    "house_phoenix_world.sdf",
                 ],
             ),
         ],
@@ -122,14 +122,14 @@ def generate_launch_description():
     pose_x = LaunchConfiguration("pose_x")
     declare_pose_x_arg = DeclareLaunchArgument(
         "pose_x",
-        default_value=["5.0"],
+        default_value=["16.5"],
         description="Initial robot position in the global 'x' axis.",
     )
 
     pose_y = LaunchConfiguration("pose_y")
     declare_pose_y_arg = DeclareLaunchArgument(
         "pose_y",
-        default_value=["-5.0"],
+        default_value=["13.0"],
         description="Initial robot position in the global 'y' axis.",
     )
 
@@ -197,7 +197,7 @@ def generate_launch_description():
         parameters=[{"config_file": gz_bridge_config_path}],
         output="screen",
     )
-
+   
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -216,7 +216,43 @@ def generate_launch_description():
             "publish_robot_state": publish_robot_state,
             "use_sim": "True",
             "simulation_engine": "ignition-gazebo",
+            "use_arm": "False",
+            "use_ekf": "True",
         }.items(),
+    )
+
+    # robot_localization_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         PathJoinSubstitution(
+    #             [gps_wpf_dir,
+    #              'launch',
+    #              'ekf_navsat.launch.py'
+    #              ]
+    #             )
+    #     ),
+    #     launch_arguments={
+    #         "use_sim":"True"
+    #     }.items()
+    # )
+
+    lidar_sensor_suite_launch =  IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    get_package_share_directory("lidar_sensor_suite_bringup"),
+                    "launch",
+                    "lidar_sensor_suite.launch.py",
+                ]
+            )
+        )
+    )
+
+    other_action_timer = TimerAction(
+        period=10.0,
+        actions=[
+            lidar_sensor_suite_launch,
+            # robot_localization_cmd,
+        ],
     )
 
     return LaunchDescription(
@@ -238,5 +274,6 @@ def generate_launch_description():
             gz_bridge,
             gz_spawn_entity,
             bringup_launch,
+            other_action_timer,
         ]
     )

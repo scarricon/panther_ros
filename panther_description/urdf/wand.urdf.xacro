@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+
+  <!-- body defining macro -->
+  <xacro:macro
+    name="wand"
+    params="parent_link xyz rpy">
+
+
+    <link name="wand_link">
+      <visual>
+        <origin xyz="0.00 0.0 0.00" rpy="0.0 0.0 0.0" />
+        <geometry>
+          <mesh filename="package://panther_description/meshes/wand.dae" />
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0.00 0.00 0.00" rpy="0.0 0.0 0.0" />
+        <geometry>
+          <mesh filename="package://panther_description/meshes/wand.stl" />
+        </geometry>
+      </collision>
+
+      <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <mass value="4.0" />
+        <inertia ixx="2.630036" ixy="-0.023480" ixz="0.052320"
+                                iyy="2.463509"  iyz="0.009337"
+                                                izz="4.611945" />
+      </inertial>
+    </link>
+    
+    <joint name="${parent_link}_to_wand_link_joint" type="fixed">
+      <origin xyz="${xyz}" rpy="${rpy}" />
+      <parent link="${parent_link}" />
+      <child link="wand_link" />
+    </joint>
+
+  </xacro:macro>
+
+</robot>
