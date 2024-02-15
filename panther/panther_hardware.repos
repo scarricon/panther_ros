@@ -3,10 +3,6 @@ repositories:
     type: git
     url: https://github.com/husarion/panther_msgs.git
     version: ros2-control
-  ros_components_description:
-    type: git
-    url: https://github.com/scarricon/ros_components_description.git
-    version: main
   # mecanum controller
   rosbot_controllers:
     type: git
