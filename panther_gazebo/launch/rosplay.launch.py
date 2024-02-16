@@ -29,9 +29,9 @@ from launch.substitutions import (
 from launch_ros.actions import Node, SetParameter
 from launch_ros.substitutions import FindPackageShare
 from visualization_msgs.msg import Marker
-
-
-
+import os
+import yaml
+from pathlib import Path
 
 
 def generate_launch_description():
@@ -52,14 +52,17 @@ def generate_launch_description():
         ],
         output='both'
     )
+    
 
-    rosbag_filename = '/home/ssrmist/rosbag2_2024_02_02-09_50_36'
+    rosbag_share_dir = get_package_share_directory('panther_gazebo')
+    rosplay_params_file = os.path.join(rosbag_share_dir, 'config', 'rosplay.yaml')
+    rosplay_params = yaml.safe_load(Path(rosplay_params_file).read_text())
     rosplay_process = ExecuteProcess(
                     cmd=[
                         "ros2",
                         "bag",
                         "play",
-                        rosbag_filename
+                        rosplay_params['rosbag_filename']
                     ],
                     output="screen")
 
