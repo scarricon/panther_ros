@@ -45,7 +45,7 @@ def generate_launch_description():
         "wheel_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_description"),
+                get_package_share_directory("forklift_description"),
                 "config",
                 PythonExpression(["'", wheel_type, ".yaml'"]),
             ]

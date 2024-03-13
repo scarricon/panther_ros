@@ -25,10 +25,112 @@ from launch.substitutions import (
     PythonExpression,
 )
 from launch_ros.actions import Node, SetParameter
+from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
     wheel_type = LaunchConfiguration("wheel_type")
+    namespace = LaunchConfiguration('namespace')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    autostart = LaunchConfiguration('autostart')
+    
+    # Keepout zones
+    keepout_mask_params_file = LaunchConfiguration('keepout_mask_params_file')
+    keepout_mask_yaml_file = LaunchConfiguration('keepout_mask')
+    keepout_lifecycle_nodes = ['keepout_filter_mask_server', 'keepout_costmap_filter_info_server']
+    # Make re-written yaml
+    keepout_mask_param_substitutions = {
+        'use_sim_time': use_sim_time,
+        'yaml_filename': keepout_mask_yaml_file}
+
+    keepout_mask_configured_params = RewrittenYaml(
+        source_file=keepout_mask_params_file,
+        root_key=namespace,
+        param_rewrites=keepout_mask_param_substitutions,
+        convert_types=True)
+
+    declare_keepout_mask_params_file_cmd = DeclareLaunchArgument(
+            'keepout_mask_params_file',
+            default_value='/nav2_config/keepout_params.yaml',
+            description='Full path to the ROS2 parameters file to use')
+
+    declare_keepout_mask_yaml_file_cmd = DeclareLaunchArgument(
+            'keepout_mask',
+            default_value='/maps/keepout_mask.yaml',
+            description='Full path to filter mask yaml file to load')
+
+    # Speed zones
+    speed_params_file = LaunchConfiguration('speed_params_file')
+    speed_mask_yaml_file = LaunchConfiguration('speed_mask')
+    speed_lifecycle_nodes = ['speed_filter_mask_server', 'speed_costmap_filter_info_server']
+
+    # Make re-written yaml
+    speed_mask_param_substitutions = {
+        'use_sim_time': use_sim_time,
+        'yaml_filename': speed_mask_yaml_file}
+
+    speed_mask_configured_params = RewrittenYaml(
+        source_file=speed_params_file,
+        root_key=namespace,
+        param_rewrites=speed_mask_param_substitutions,
+        convert_types=True)
+    
+
+    declare_speed_mask_params_file_cmd = DeclareLaunchArgument(
+            'speed_params_file',
+            default_value='/nav2_config/speed_params.yaml',
+            description='Full path to the ROS2 parameters file to use')
+
+    declare_speed_mask_yaml_file_cmd = DeclareLaunchArgument(
+            'speed_mask',
+            default_value='/maps/speed_mask.yaml',
+            description='Full path to filter mask yaml file to load')
+
+    # Preferred Lanes
+    preferred_lanes_params_file = LaunchConfiguration('preferred_lanes_params_file')
+    preferred_lanes_mask_yaml_file = LaunchConfiguration('preferred_lanes_mask')
+    preferred_lanes_lifecycle_nodes = ['preferred_lanes_filter_mask_server', 'preferred_lanes_costmap_filter_info_server']
+
+    ## Make re-written yaml
+    preferred_lanes_mask_param_substitutions = {
+        'use_sim_time': use_sim_time,
+        'yaml_filename': preferred_lanes_mask_yaml_file}
+
+    preferred_lanes_mask_configured_params = RewrittenYaml(
+        source_file=preferred_lanes_params_file,
+        root_key=namespace,
+        param_rewrites=preferred_lanes_mask_param_substitutions,
+        convert_types=True)
+    
+
+    declare_preferred_lanes_mask_params_file_cmd = DeclareLaunchArgument(
+            'preferred_lanes_params_file',
+            default_value='/nav2_config/preferred_lanes_params.yaml',
+            description='Full path to the ROS2 parameters file to use')
+
+    declare_preferred_lanes_mask_yaml_file_cmd = DeclareLaunchArgument(
+            'preferred_lanes_mask',
+            default_value='/maps/preferred_lanes_mask.yaml',
+            description='Full path to filter mask yaml file to load')
+    
+
+
+    # Declare the launch arguments
+    declare_namespace_cmd = DeclareLaunchArgument(
+        'namespace',
+        default_value='',
+        description='Top-level namespace')
+
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true')
+
+    declare_autostart_cmd = DeclareLaunchArgument(
+        'autostart', default_value='true',
+        description='Automatically startup the nav2 stack')
+
+
     declare_wheel_type_arg = DeclareLaunchArgument(
         "wheel_type",
         default_value="custom",
@@ -266,11 +368,98 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            "params_file":"/nav2_params.yaml",
+            "params_file":"/nav2_config/nav2_params.yaml",
             "use_sim_time":"True",
             "map":"/maps/map.yaml"
         }.items()
     )
+
+    start_keepout_lifecycle_manager_cmd = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='keepout_lifecycle_manager_costmap_filters',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[{'use_sim_time': use_sim_time},
+                        {'autostart': autostart},
+                        {'node_names': keepout_lifecycle_nodes}])
+    
+    start_keepout_map_server_cmd = Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='keepout_filter_mask_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[keepout_mask_configured_params])
+
+    start_keepout_costmap_filter_info_server_cmd = Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='keepout_costmap_filter_info_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[keepout_mask_configured_params])
+    
+    start_speed_lifecycle_manager_cmd = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='speed_lifecycle_manager_costmap_filters',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[{'use_sim_time': use_sim_time},
+                        {'autostart': autostart},
+                        {'node_names': speed_lifecycle_nodes}])
+
+    start_speed_map_server_cmd = Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='speed_filter_mask_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[speed_mask_configured_params])
+
+    start_speed_costmap_filter_info_server_cmd = Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='speed_costmap_filter_info_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[speed_mask_configured_params])
+
+    start_preferred_lanes_lifecycle_manager_cmd = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='preferred_lanes_lifecycle_manager_costmap_filters',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[{'use_sim_time': use_sim_time},
+                        {'autostart': autostart},
+                        {'node_names': preferred_lanes_lifecycle_nodes}])
+    
+    start_preferred_lanes_map_server_cmd = Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='preferred_lanes_filter_mask_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[preferred_lanes_mask_configured_params])
+
+    start_preferred_lanes_costmap_filter_info_server_cmd = Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='preferred_lanes_costmap_filter_info_server',
+            namespace=namespace,
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[preferred_lanes_mask_configured_params])
 
 
     other_action_timer = TimerAction(
@@ -280,6 +469,15 @@ def generate_launch_description():
             # robot_localization_cmd,
             nav2_launch,
             # resize_window
+            start_keepout_lifecycle_manager_cmd,
+            start_keepout_map_server_cmd,
+            start_keepout_costmap_filter_info_server_cmd,
+            start_speed_lifecycle_manager_cmd,
+            start_speed_map_server_cmd,
+            start_speed_costmap_filter_info_server_cmd,
+            start_preferred_lanes_lifecycle_manager_cmd,
+            start_preferred_lanes_map_server_cmd,
+            start_preferred_lanes_costmap_filter_info_server_cmd
         ],
     )
 
@@ -305,6 +503,15 @@ def generate_launch_description():
             declare_battery_config_path_arg,
             declare_gz_bridge_config_path_arg,
             declare_publish_robot_state_arg,
+            declare_namespace_cmd,
+            declare_use_sim_time_cmd,
+            declare_autostart_cmd,
+            declare_keepout_mask_params_file_cmd,
+            declare_keepout_mask_yaml_file_cmd,
+            declare_speed_mask_params_file_cmd,
+            declare_speed_mask_yaml_file_cmd,
+            declare_preferred_lanes_mask_params_file_cmd,
+            declare_preferred_lanes_mask_yaml_file_cmd,
             # Sets use_sim_time for all nodes started below (doesn't work for nodes started from ignition gazebo)
             SetParameter(name="use_sim_time", value=True),
             gz_sim,

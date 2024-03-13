@@ -16,8 +16,7 @@
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.conditions import IfCondition, UnlessCondition
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription,TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
@@ -31,7 +30,7 @@ def generate_launch_description():
     wheel_type = LaunchConfiguration("wheel_type")
     declare_wheel_type_arg = DeclareLaunchArgument(
         "wheel_type",
-        default_value="custom",
+        default_value="WH01",
         description=(
             "Specify the type of wheel. If you select a value from the provided options ('WH01',"
             " 'WH02', 'WH04'), you can disregard the 'wheel_config_path' and"
@@ -46,7 +45,7 @@ def generate_launch_description():
         "wheel_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_description"),
+                get_package_share_directory("forklift_description"),
                 "config",
                 PythonExpression(["'", wheel_type, ".yaml'"]),
             ]
@@ -63,7 +62,7 @@ def generate_launch_description():
         "controller_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_controller"),
+                get_package_share_directory("forklift_controller"),
                 "config",
                 PythonExpression(["'", wheel_type, "_controller.yaml'"]),
             ]
@@ -113,7 +112,7 @@ def generate_launch_description():
                 [
                     get_package_share_directory("icon_sites_gz"),
                     "worlds",
-                    "factory.sdf",
+                    "house_phoenix_world.sdf",
                 ],
             ),
         ],
@@ -124,15 +123,13 @@ def generate_launch_description():
     declare_pose_x_arg = DeclareLaunchArgument(
         "pose_x",
         default_value=["16.5"],
-        # default_value=["1.5"],
         description="Initial robot position in the global 'x' axis.",
     )
 
     pose_y = LaunchConfiguration("pose_y")
     declare_pose_y_arg = DeclareLaunchArgument(
         "pose_y",
-        # default_value=["13.0"],
-        default_value=["20.0"],
+        default_value=["13.0"],
         description="Initial robot position in the global 'y' axis.",
     )
 
@@ -176,7 +173,7 @@ def generate_launch_description():
         executable="create",
         arguments=[
             "-name",
-            "panther",
+            "forklift",
             "-allow_renaming",
             "true",
             "-topic",
@@ -200,14 +197,12 @@ def generate_launch_description():
         parameters=[{"config_file": gz_bridge_config_path}],
         output="screen",
     )
-
-
-
+   
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_bringup"),
+                    get_package_share_directory("forklift_bringup"),
                     "launch",
                     "bringup.launch.py",
                 ]
@@ -226,22 +221,19 @@ def generate_launch_description():
         }.items(),
     )
 
-    gps_wpf_dir = get_package_share_directory("nav2_gps")
-
-    robot_localization_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [gps_wpf_dir,
-                 'launch',
-                 'ekf_navsat.launch.py'
-                 ]
-                )
-        ),
-        launch_arguments={
-            "use_sim":"True",
-        }.items(),
-        condition=UnlessCondition("True")
-    )
+    # robot_localization_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         PathJoinSubstitution(
+    #             [gps_wpf_dir,
+    #              'launch',
+    #              'ekf_navsat.launch.py'
+    #              ]
+    #             )
+    #     ),
+    #     launch_arguments={
+    #         "use_sim":"True"
+    #     }.items()
+    # )
 
     lidar_sensor_suite_launch =  IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -253,44 +245,15 @@ def generate_launch_description():
                 ]
             )
         )
-    )   
-
-    nav2_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    get_package_share_directory("nav2_bringup"),
-                    "launch",
-                    "bringup_launch.py"
-                ]
-            )
-        ),
-        launch_arguments={
-            "params_file":"/nav2_params.yaml",
-            "use_sim_time":"True",
-            "map":"/maps/map.yaml"
-        }.items()
     )
 
-
     other_action_timer = TimerAction(
-        period=20.0,
+        period=10.0,
         actions=[
             lidar_sensor_suite_launch,
             # robot_localization_cmd,
-            nav2_launch,
-            # resize_window
         ],
     )
-
-    # use_rviz = LaunchConfiguration('use_rviz')
-    start_rviz_cmd = Node(
-        package='rviz2',
-        executable='rviz2',
-        # arguments=['-d', rviz_config_file],
-        output='screen')
-    
-
 
     return LaunchDescription(
         [
@@ -311,7 +274,6 @@ def generate_launch_description():
             gz_bridge,
             gz_spawn_entity,
             bringup_launch,
-            start_rviz_cmd,
             other_action_timer,
         ]
     )
