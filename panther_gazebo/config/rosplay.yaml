@@ -1,1 +1,4 @@
-rosbag_filename: '/home/ssrmist/rosbag2_2024_02_02-09_50_36' # [W]
+rosbag_filename: '/home/ssrmist/rosbags/factory/rosbag2_2024_03_19-17_19_54' # [W]
+x: 2.10
+y: -3.9
+theta: -0.30

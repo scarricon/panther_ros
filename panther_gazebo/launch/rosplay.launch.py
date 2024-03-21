@@ -38,25 +38,26 @@ def generate_launch_description():
     env_name = LaunchConfiguration("env_name")
     declare_env_name = DeclareLaunchArgument(
         "env_name",
-        default_value="HouseOfPhoenix",
+        default_value="Factory",
         description="Name of environment deployed",
     )
+
+    rosbag_share_dir = get_package_share_directory('panther_gazebo')
+    rosplay_params_file = os.path.join(rosbag_share_dir, 'config', 'rosplay.yaml')
+    rosplay_params = yaml.safe_load(Path(rosplay_params_file).read_text())
 
     load_mesh = Node(
         package="icon_sites_gz",
         executable="environment_mesh",
         parameters=[
-            {'env_name':'HouseOfPhoenix'},
-            {'x_pose':64.8},
-            {'y_pose':81.75}
+            {'env_name':'Factory'},
+            {'x_pose':rosplay_params['x']},#64.8},
+            {'y_pose':rosplay_params['y']}, #81.75}
+            {'theta_pose':rosplay_params['theta']}
         ],
         output='both'
     )
-    
-
-    rosbag_share_dir = get_package_share_directory('panther_gazebo')
-    rosplay_params_file = os.path.join(rosbag_share_dir, 'config', 'rosplay.yaml')
-    rosplay_params = yaml.safe_load(Path(rosplay_params_file).read_text())
+       
     rosplay_process = ExecuteProcess(
                     cmd=[
                         "ros2",
