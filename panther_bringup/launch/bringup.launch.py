@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2023 Husarion sp. z o.o.
+# Copyright 2024 Husarion sp. z o.o.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 import textwrap
 
 import click
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -34,7 +33,8 @@ from launch.substitutions import (
     PathJoinSubstitution,
     PythonExpression,
 )
-from launch_ros.actions import Node, PushRosNamespace, SetParameter
+from launch_ros.actions import Node, SetParameter
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -73,8 +73,8 @@ def generate_launch_description():
     namespace = LaunchConfiguration("namespace")
     declare_namespace_arg = DeclareLaunchArgument(
         "namespace",
-        default_value="",
-        description="Panther robot namespace",
+        default_value=EnvironmentVariable("ROBOT_NAMESPACE", default_value=""),
+        description="Namespace for all Panther topics",
     )
 
     use_sim = LaunchConfiguration("use_sim")
@@ -102,7 +102,7 @@ def generate_launch_description():
         "wheel_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_description"),
+                FindPackageShare("panther_description"),
                 "config",
                 PythonExpression(["'", wheel_type, ".yaml'"]),
             ]
@@ -119,7 +119,7 @@ def generate_launch_description():
         "controller_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_controller"),
+                FindPackageShare("panther_controller"),
                 "config",
                 PythonExpression(["'", wheel_type, "_controller.yaml'"]),
             ]
@@ -131,7 +131,6 @@ def generate_launch_description():
         ),
     )
 
-    # TODO: find some better solution than default to empty string
     battery_config_path = LaunchConfiguration("battery_config_path")
     declare_battery_config_path_arg = DeclareLaunchArgument(
         "battery_config_path",
@@ -140,6 +139,26 @@ def generate_launch_description():
             "This configuration is intended for use in simulations only."
         ),
         default_value="",
+    )
+
+    led_config_file = LaunchConfiguration("led_config_file")
+    declare_led_config_file_arg = DeclareLaunchArgument(
+        "led_config_file",
+        default_value=PathJoinSubstitution(
+            [
+                FindPackageShare("panther_lights"),
+                "config",
+                PythonExpression(["'led_config.yaml'"]),
+            ]
+        ),
+        description="Path to a YAML file with a description of led configuration",
+    )
+
+    user_led_animations_file = LaunchConfiguration("user_led_animations_file")
+    declare_user_led_animations_file_arg = DeclareLaunchArgument(
+        "user_led_animations_file",
+        default_value="",
+        description="Path to a YAML file with a description of the user defined animations",
     )
 
     simulation_engine = LaunchConfiguration("simulation_engine")
@@ -177,17 +196,30 @@ def generate_launch_description():
     declare_ekf_config_path_arg = DeclareLaunchArgument(
         "ekf_config_path",
         default_value=PathJoinSubstitution(
-            [get_package_share_directory("panther_bringup"), "config", "ekf.yaml"]
+            [FindPackageShare("panther_bringup"), "config", "ekf.yaml"]
         ),
         description="Path to the EKF config file",
         condition=IfCondition(use_ekf),
+    )
+
+    shutdown_hosts_config_path = LaunchConfiguration("shutdown_hosts_config_path")
+    declare_shutdown_hosts_config_path_arg = DeclareLaunchArgument(
+        "shutdown_hosts_config_path",
+        default_value=PathJoinSubstitution(
+            [
+                FindPackageShare("panther_bringup"),
+                "config",
+                "shutdown_hosts.yaml",
+            ]
+        ),
+        description="Path to file with list of hosts to request shutdown.",
     )
 
     controller_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_controller"),
+                    FindPackageShare("panther_controller"),
                     "launch",
                     "controller.launch.py",
                 ]
@@ -202,7 +234,7 @@ def generate_launch_description():
             "use_sim": use_sim,
             "simulation_engine": simulation_engine,
             "publish_robot_state": publish_robot_state,
-            "use_arm": use_arm
+            "namespace": namespace,
         }.items(),
     )
 
@@ -210,7 +242,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_bringup"),
+                    FindPackageShare("panther_bringup"),
                     "launch",
                     "imu.launch.py",
                 ]
@@ -218,8 +250,9 @@ def generate_launch_description():
         ),
         launch_arguments={
             "imu_config_path": PathJoinSubstitution(
-                [get_package_share_directory("panther_bringup"), "config", "imu.yaml"]
+                [FindPackageShare("panther_bringup"), "config", "imu.yaml"]
             ),
+            "namespace": namespace,
         }.items(),
         condition=UnlessCondition(use_sim),
     )
@@ -228,27 +261,33 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_lights"),
+                    FindPackageShare("panther_lights"),
                     "launch",
                     "lights.launch.py",
                 ]
             )
         ),
         condition=UnlessCondition(use_sim),
+        launch_arguments={
+            "led_config_file": led_config_file,
+            "namespace": namespace,
+            "user_led_animations_file": user_led_animations_file,
+        }.items(),
     )
 
     battery_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_battery"),
+                    FindPackageShare("panther_battery"),
                     "launch",
                     "battery.launch.py",
                 ]
-            )
+            ),
         ),
         condition=UnlessCondition(use_sim),
         launch_arguments={
+            "namespace": namespace,
             "panther_version": panther_version,
         }.items(),
     )
@@ -259,45 +298,46 @@ def generate_launch_description():
         name="ekf_node",
         output="screen",
         parameters=[ekf_config_path],
+        namespace=namespace,
+        remappings=[
+            ("enable", "ekf_node/enable"),
+            ("set_pose", "ekf_node/set_pose"),
+            ("toggle", "ekf_node/toggle"),
+        ],
         condition=IfCondition(use_ekf),
     )
 
-    joy2twist_launch = IncludeLaunchDescription(
+    manager_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("joy2twist"),
+                    FindPackageShare("panther_manager"),
                     "launch",
-                    "gamepad_controller.launch.py",
+                    "manager_bt.launch.py",
                 ]
             )
         ),
+        condition=UnlessCondition(use_sim),
         launch_arguments={
-            # No need to additionally set namespace - it is set for all nodes by PushRosNamespace
-            "namespace": "",
-            "joy2twist_params_file": PathJoinSubstitution(
-                [
-                    get_package_share_directory("panther_bringup"),
-                    "config",
-                    "joy2twist_panther.yaml",
-                ]
-            ),
+            "namespace": namespace,
+            "panther_version": panther_version,
+            "shutdown_hosts_config_path": shutdown_hosts_config_path,
         }.items(),
     )
 
     other_action_timer = TimerAction(
-        period=20.0,
+        period=10.0,
         actions=[
             battery_launch,
             imu_launch,
-            joy2twist_launch,
             lights_launch,
             robot_localization_node,
+            manager_launch,
         ],
     )
 
     waiting_msg = TimerAction(
-        period=10.0,
+        period=7.0,
         actions=[
             LogInfo(
                 msg=(
@@ -315,12 +355,13 @@ def generate_launch_description():
         declare_wheel_config_path_arg,
         declare_controller_config_path_arg,
         declare_battery_config_path_arg,
+        declare_led_config_file_arg,
+        declare_user_led_animations_file_arg,
         declare_simulation_engine_arg,
         declare_publish_robot_state_arg,
         declare_use_ekf_arg,
         declare_ekf_config_path_arg,
-        declare_use_arm_arg,
-        PushRosNamespace(namespace),
+        declare_shutdown_hosts_config_path_arg,
         SetParameter(name="use_sim_time", value=use_sim),
         welcome_msg,
         controller_launch,

@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,17 @@
 // limitations under the License.
 
 #include <chrono>
+#include <cstdint>
 #include <memory>
 
-#include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
+#include "gtest/gtest.h"
 
-#include <sensor_msgs/msg/battery_state.hpp>
+#include "rclcpp/rclcpp.hpp"
 
-#include <panther_battery/battery.hpp>
-#include <panther_utils/test/test_utils.hpp>
+#include "sensor_msgs/msg/battery_state.hpp"
+
+#include "panther_battery/battery.hpp"
+#include "panther_utils/test/test_utils.hpp"
 
 using BatteryStateMsg = sensor_msgs::msg::BatteryState;
 
@@ -53,7 +55,7 @@ public:
 
 protected:
   void TestDefaultBatteryStateMsg(
-    const uint8_t & power_supply_status, const uint8_t & power_supply_health);
+    const std::uint8_t & power_supply_status, const std::uint8_t & power_supply_health);
 
   std::unique_ptr<BatteryWrapper> battery_;
   BatteryStateMsg battery_state_;
@@ -62,7 +64,7 @@ protected:
 TestBattery::TestBattery() { battery_ = std::make_unique<BatteryWrapper>(); }
 
 void TestBattery::TestDefaultBatteryStateMsg(
-  const uint8_t & power_supply_status, const uint8_t & power_supply_health)
+  const std::uint8_t & power_supply_status, const std::uint8_t & power_supply_health)
 {
   // Const values
   EXPECT_TRUE(std::isnan(battery_state_.temperature));

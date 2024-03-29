@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <memory>
 
-#include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
+#include "gtest/gtest.h"
 
-#include <sensor_msgs/msg/battery_state.hpp>
+#include "rclcpp/rclcpp.hpp"
 
-#include <panther_msgs/msg/driver_state.hpp>
+#include "sensor_msgs/msg/battery_state.hpp"
 
-#include <panther_battery/roboteq_battery.hpp>
-#include <panther_utils/test/test_utils.hpp>
+#include "panther_msgs/msg/driver_state.hpp"
+
+#include "panther_battery/roboteq_battery.hpp"
+#include "panther_utils/test/test_utils.hpp"
 
 using BatteryStateMsg = sensor_msgs::msg::BatteryState;
 using DriverStateMsg = panther_msgs::msg::DriverState;
@@ -55,11 +57,11 @@ public:
 protected:
   void UpdateBattery(const float voltage, const float current);
   void TestDefaultBatteryStateMsg(
-    const uint8_t power_supply_status, const uint8_t power_supply_health);
+    const std::uint8_t power_supply_status, const std::uint8_t power_supply_health);
 
   void TestBatteryStateMsg(
     const float expected_voltage, const float expected_current, const float expected_percentage,
-    const uint8_t power_supply_status, const uint8_t power_supply_health);
+    const std::uint8_t power_supply_status, const std::uint8_t power_supply_health);
 
   static constexpr float kDriverStateTimeout = 0.2;
 
@@ -93,7 +95,7 @@ void TestRoboteqBattery::UpdateBattery(const float voltage, const float current)
 }
 
 void TestRoboteqBattery::TestDefaultBatteryStateMsg(
-  const uint8_t power_supply_status, const uint8_t power_supply_health)
+  const std::uint8_t power_supply_status, const std::uint8_t power_supply_health)
 {
   // Const values
   EXPECT_TRUE(std::isnan(battery_state_.temperature));
@@ -117,7 +119,7 @@ void TestRoboteqBattery::TestDefaultBatteryStateMsg(
 
 void TestRoboteqBattery::TestBatteryStateMsg(
   const float expected_voltage, const float expected_current, const float expected_percentage,
-  const uint8_t power_supply_status, const uint8_t power_supply_health)
+  const std::uint8_t power_supply_status, const std::uint8_t power_supply_health)
 {
   // Const values
   EXPECT_TRUE(std::isnan(battery_state_.capacity));
@@ -232,7 +234,7 @@ TEST_F(TestRoboteqBattery, ValidateDriverStateMsg)
   EXPECT_NO_THROW(battery_->ValidateDriverStateMsg(stamp));
 
   // Check timeout
-  const uint32_t timeout_nanoseconds = (kDriverStateTimeout + 0.05) * 1e9;
+  const std::uint32_t timeout_nanoseconds = (kDriverStateTimeout + 0.05) * 1e9;
   stamp = rclcpp::Time(0, timeout_nanoseconds, RCL_ROS_TIME);
   EXPECT_THROW(battery_->ValidateDriverStateMsg(stamp), std::runtime_error);
 

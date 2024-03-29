@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <panther_battery/adc_battery.hpp>
+#include "panther_battery/adc_battery.hpp"
 
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <thread>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
+#include "rclcpp/rclcpp.hpp"
 
-#include <panther_utils/moving_average.hpp>
+#include "panther_utils/moving_average.hpp"
 
 namespace panther_battery
 {
@@ -151,7 +152,7 @@ void ADCBattery::UpdateBatteryStateRaw()
   battery_state_raw_.charge = battery_state_raw_.percentage * battery_state_raw_.design_capacity;
 }
 
-uint8_t ADCBattery::GetBatteryStatus(const float charge, const bool charger_connected)
+std::uint8_t ADCBattery::GetBatteryStatus(const float charge, const bool charger_connected)
 {
   if (charger_connected) {
     if (fabs(battery_state_.percentage - 1.0f) < std::numeric_limits<float>::epsilon()) {
@@ -166,7 +167,7 @@ uint8_t ADCBattery::GetBatteryStatus(const float charge, const bool charger_conn
   }
 }
 
-uint8_t ADCBattery::GetBatteryHealth(const float voltage, const float temp)
+std::uint8_t ADCBattery::GetBatteryHealth(const float voltage, const float temp)
 {
   if (voltage < kVBatFatalMin) {
     SetErrorMsg("Battery voltage is critically low!");

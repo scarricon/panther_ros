@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <panther_battery/single_battery_publisher.hpp>
+#include "panther_battery/single_battery_publisher.hpp"
 
 #include <memory>
 #include <stdexcept>
 #include <utility>
 
-#include <rclcpp/rclcpp.hpp>
+#include "diagnostic_updater/diagnostic_updater.hpp"
+#include "rclcpp/rclcpp.hpp"
 
-#include <sensor_msgs/msg/battery_state.hpp>
+#include "sensor_msgs/msg/battery_state.hpp"
 
-#include <panther_battery/battery.hpp>
-#include <panther_battery/battery_publisher.hpp>
+#include "panther_battery/battery.hpp"
+#include "panther_battery/battery_publisher.hpp"
 
 namespace panther_battery
 {
 
 SingleBatteryPublisher::SingleBatteryPublisher(
-  const rclcpp::Node::SharedPtr & node, const std::shared_ptr<Battery> & battery)
-: BatteryPublisher(std::move(node)), battery_(std::move(battery))
+  const rclcpp::Node::SharedPtr & node,
+  const std::shared_ptr<diagnostic_updater::Updater> & diagnostic_updater,
+  const std::shared_ptr<Battery> & battery)
+: BatteryPublisher(std::move(node), std::move(diagnostic_updater)), battery_(std::move(battery))
 {
   battery_pub_ = node_->create_publisher<BatteryStateMsg>("battery", 5);
   battery_1_pub_ = node_->create_publisher<BatteryStateMsg>("battery_1_raw", 5);
@@ -63,6 +66,21 @@ void SingleBatteryPublisher::LogErrors()
       node_->get_logger(), *node_->get_clock(), 10000, "Battery error: %s",
       battery_->GetErrorMsg().c_str());
   }
+}
+
+void SingleBatteryPublisher::DiagnoseBattery(diagnostic_updater::DiagnosticStatusWrapper & status)
+{
+  unsigned char error_level{diagnostic_updater::DiagnosticStatusWrapper::OK};
+  std::string message{"Battery has no error messages"};
+
+  if (battery_->HasErrorMsg()) {
+    error_level = diagnostic_updater::DiagnosticStatusWrapper::ERROR;
+    message = "Battery has error";
+
+    status.add("Error message", battery_->GetErrorMsg());
+  }
+
+  status.summary(error_level, message);
 }
 
 }  // namespace panther_battery

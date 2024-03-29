@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ protected:
    * @brief Creates buffer with BGR format with structure appropriate for
    * the SPI transfer based on a given RGBA frame
    *
-   * @returns buffer vector.
+   * @return buffer vector.
    *
    * @exception std::runtime_error if frame has incorrect number of bytes
    */

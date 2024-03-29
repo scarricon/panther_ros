@@ -12,175 +12,204 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-
 #include <gtest/gtest.h>
 
 #include <panther_hardware_interfaces/roboteq_error_filter.hpp>
 
-TEST(TestRoboteqErrorFilter, test_initial_state)
+TEST(TestRoboteqErrorFilter, InitialState)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
+
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_filter_error)
+TEST(TestRoboteqErrorFilter, FilterError)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(0, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
 
-  ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
-
-  roboteq_error_filter.UpdateError(0, false);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
-  roboteq_error_filter.UpdateError(0, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, false);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
+
+  ASSERT_FALSE(roboteq_error_filter.IsError());
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_error)
+TEST(TestRoboteqErrorFilter, Error)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(0, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
-  roboteq_error_filter.UpdateError(0, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
 
   ASSERT_TRUE(roboteq_error_filter.IsError());
-  ASSERT_TRUE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_filter_second_error)
+TEST(TestRoboteqErrorFilter, FilterSecondError)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(1, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
 
-  ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
-
-  roboteq_error_filter.UpdateError(1, false);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
-  roboteq_error_filter.UpdateError(1, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, false);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
+
+  ASSERT_FALSE(roboteq_error_filter.IsError());
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_second_error)
+TEST(TestRoboteqErrorFilter, SecondError)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(1, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
-  roboteq_error_filter.UpdateError(1, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
 
   ASSERT_TRUE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_TRUE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_error_single)
+TEST(TestRoboteqErrorFilter, ErrorSingle)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2), ErrorFilter(1)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(2, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_DRIVER_STATE, true);
 
   ASSERT_TRUE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
-  ASSERT_TRUE(roboteq_error_filter.IsError(2));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_clear_errors)
+TEST(TestRoboteqErrorFilter, ClearErrors)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2), ErrorFilter(1)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(0, true);
-  roboteq_error_filter.UpdateError(0, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
 
-  roboteq_error_filter.UpdateError(1, true);
-  roboteq_error_filter.UpdateError(1, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
 
-  roboteq_error_filter.UpdateError(2, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_DRIVER_STATE, true);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::ROBOTEQ_DRIVER, true);
 
   ASSERT_TRUE(roboteq_error_filter.IsError());
-  ASSERT_TRUE(roboteq_error_filter.IsError(0));
-  ASSERT_TRUE(roboteq_error_filter.IsError(1));
-  ASSERT_TRUE(roboteq_error_filter.IsError(2));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_TRUE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
   roboteq_error_filter.SetClearErrorsFlag();
   // Has to trigger at least one update to clear errors
-  roboteq_error_filter.UpdateError(0, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
-  ASSERT_FALSE(roboteq_error_filter.IsError(2));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
-TEST(TestRoboteqErrorFilter, test_clear_errors_counters)
+TEST(TestRoboteqErrorFilter, ClearErrorsCounters)
 {
-  using panther_hardware_interfaces::ErrorFilter;
-  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(
-    std::vector<ErrorFilter>{ErrorFilter(2), ErrorFilter(2)});
+  using panther_hardware_interfaces::ErrorsFilterIds;
 
-  roboteq_error_filter.UpdateError(0, true);
-  roboteq_error_filter.UpdateError(1, true);
+  panther_hardware_interfaces::RoboteqErrorFilter roboteq_error_filter(2, 2, 1, 1);
+
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 
   roboteq_error_filter.SetClearErrorsFlag();
 
-  roboteq_error_filter.UpdateError(0, true);
-  roboteq_error_filter.UpdateError(1, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::WRITE_PDO_CMDS, true);
+  roboteq_error_filter.UpdateError(ErrorsFilterIds::READ_PDO_MOTOR_STATES, true);
 
   ASSERT_FALSE(roboteq_error_filter.IsError());
-  ASSERT_FALSE(roboteq_error_filter.IsError(0));
-  ASSERT_FALSE(roboteq_error_filter.IsError(1));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::WRITE_PDO_CMDS));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_MOTOR_STATES));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::READ_PDO_DRIVER_STATE));
+  EXPECT_FALSE(roboteq_error_filter.IsError(ErrorsFilterIds::ROBOTEQ_DRIVER));
 }
 
 int main(int argc, char ** argv)

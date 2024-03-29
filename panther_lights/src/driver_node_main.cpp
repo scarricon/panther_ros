@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <panther_lights/driver_node.hpp>
+#include "panther_lights/driver_node.hpp"
 
 #include <iostream>
 #include <memory>
@@ -27,8 +27,8 @@ int main(int argc, char ** argv)
 
   try {
     rclcpp::spin(lights_driver_node);
-  } catch (const std::runtime_error & err) {
-    std::cerr << "[lights_driver_node] Caught exception: " << err.what() << std::endl;
+  } catch (const std::runtime_error & e) {
+    std::cerr << "[lights_driver_node] Caught exception: " << e.what() << std::endl;
   }
 
   std::cout << "[lights_driver_node] Shutting down" << std::endl;

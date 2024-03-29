@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2023 Husarion sp. z o.o.
+# Copyright 2024 Husarion sp. z o.o.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription,TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
+    EnvironmentVariable,
     LaunchConfiguration,
     PathJoinSubstitution,
     PythonExpression,
 )
 from launch_ros.actions import Node, SetParameter
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -45,7 +46,7 @@ def generate_launch_description():
         "wheel_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("forklift_description"),
+                FindPackageShare("panther_description"),
                 "config",
                 PythonExpression(["'", wheel_type, ".yaml'"]),
             ]
@@ -62,7 +63,7 @@ def generate_launch_description():
         "controller_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_controller"),
+                FindPackageShare("panther_controller"),
                 "config",
                 PythonExpression(["'", wheel_type, "_controller.yaml'"]),
             ]
@@ -79,7 +80,7 @@ def generate_launch_description():
         "battery_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_gazebo"),
+                FindPackageShare("panther_gazebo"),
                 "config",
                 "battery_plugin_config.yaml",
             ]
@@ -95,7 +96,7 @@ def generate_launch_description():
         "gz_bridge_config_path",
         default_value=PathJoinSubstitution(
             [
-                get_package_share_directory("panther_gazebo"),
+                FindPackageShare("panther_gazebo"),
                 "config",
                 "gz_bridge.yaml",
             ]
@@ -155,11 +156,18 @@ def generate_launch_description():
         ),
     )
 
+    namespace = LaunchConfiguration("namespace")
+    declare_namespace_arg = DeclareLaunchArgument(
+        "namespace",
+        default_value=EnvironmentVariable("ROBOT_NAMESPACE", default_value=""),
+        description="Namespace for all Panther topics",
+    )
+
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("ros_gz_sim"),
+                    FindPackageShare("ros_gz_sim"),
                     "launch",
                     "gz_sim.launch.py",
                 ]
@@ -188,6 +196,7 @@ def generate_launch_description():
             rot_yaw,
         ],
         output="screen",
+        namespace=namespace,
     )
 
     gz_bridge = Node(
@@ -195,6 +204,7 @@ def generate_launch_description():
         executable="parameter_bridge",
         name="gz_bridge",
         parameters=[{"config_file": gz_bridge_config_path}],
+        namespace=namespace,
         output="screen",
     )
    
@@ -202,7 +212,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    get_package_share_directory("panther_bringup"),
+                    FindPackageShare("panther_bringup"),
                     "launch",
                     "bringup.launch.py",
                 ]
@@ -216,6 +226,7 @@ def generate_launch_description():
             "publish_robot_state": publish_robot_state,
             "use_sim": "True",
             "simulation_engine": "ignition-gazebo",
+            "namespace": namespace,
             "use_arm": "False",
             "use_ekf": "True",
         }.items(),
@@ -268,6 +279,7 @@ def generate_launch_description():
             declare_battery_config_path_arg,
             declare_gz_bridge_config_path_arg,
             declare_publish_robot_state_arg,
+            declare_namespace_arg,
             # Sets use_sim_time for all nodes started below (doesn't work for nodes started from ignition gazebo)
             SetParameter(name="use_sim_time", value=True),
             gz_sim,

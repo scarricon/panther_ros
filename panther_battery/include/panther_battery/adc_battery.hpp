@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,14 @@
 #ifndef PANTHER_BATTERY_ADC_BATTERY_HPP_
 #define PANTHER_BATTERY_ADC_BATTERY_HPP_
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 
-#include <rclcpp/rclcpp.hpp>
+#include "rclcpp/rclcpp.hpp"
 
-#include <panther_battery/battery.hpp>
-#include <panther_utils/moving_average.hpp>
+#include "panther_battery/battery.hpp"
+#include "panther_utils/moving_average.hpp"
 
 namespace panther_battery
 {
@@ -58,8 +59,8 @@ private:
   void UpdateBatteryMsgs(const rclcpp::Time & header_stamp, const bool charger_connected);
   void UpdateBatteryState(const rclcpp::Time & header_stamp, const bool charger_connected);
   void UpdateBatteryStateRaw();
-  uint8_t GetBatteryStatus(const float charge, const bool charger_connected);
-  uint8_t GetBatteryHealth(const float voltage, const float temp);
+  std::uint8_t GetBatteryStatus(const float charge, const bool charger_connected);
+  std::uint8_t GetBatteryHealth(const float voltage, const float temp);
 
   // ADC conversion parameters. Values were determined based on voltage divider
   // resistance values or differential amplifier gain and resistance values

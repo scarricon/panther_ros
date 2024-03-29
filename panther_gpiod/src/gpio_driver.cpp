@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 #include "panther_gpiod/gpio_driver.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -26,10 +27,9 @@
 #include <utility>
 #include <vector>
 
-#include <poll.h>
+#include "gpiod.hpp"
 
-#include <gpiod.hpp>
-#include <realtime_tools/thread_priority.hpp>
+#include "panther_utils/configure_rt.hpp"
 
 namespace panther_gpiod
 {
@@ -53,8 +53,8 @@ GPIODriver::~GPIODriver()
     }
   }
 
-  line_request_->release();
   GPIOMonitorOff();
+  line_request_->release();
 }
 
 void GPIODriver::GPIOMonitorEnable(
@@ -68,6 +68,10 @@ void GPIODriver::GPIOMonitorEnable(
 
 void GPIODriver::ConfigureEdgeEventCallback(const std::function<void(const GPIOInfo &)> & callback)
 {
+  if (!IsGPIOMonitorThreadRunning()) {
+    throw std::runtime_error("GPIO monitor thread is not running!");
+  }
+
   GPIOEdgeEventCallback = callback;
 }
 
@@ -91,8 +95,8 @@ void GPIODriver::ConfigureLineRequest(
   std::string pin_name;
   try {
     pin_name = pin_names_.at(gpio_info.pin);
-  } catch (const std::out_of_range & err) {
-    throw std::runtime_error("No name defined for one of pins: " + std::string(err.what()));
+  } catch (const std::out_of_range & e) {
+    throw std::runtime_error("No name defined for one of pins: " + std::string(e.what()));
   }
 
   gpiod::line::offset offset = chip.get_line_offset_from_name(pin_name);
@@ -109,13 +113,8 @@ gpiod::line_settings GPIODriver::GenerateLineSettings(const GPIOInfo & gpio_info
 
   // Set the initial value only when the line is configured for the first time;
   // otherwise, set the last known value
-  gpiod::line::value new_outpu_value;
-  if (!line_request_) {
-    new_outpu_value = gpio_info.init_value;
-  } else {
-    new_outpu_value = gpio_info.value;
-  }
-  settings.set_output_value(new_outpu_value);
+  gpiod::line::value new_output_value = line_request_ ? gpio_info.value : gpio_info.init_value;
+  settings.set_output_value(new_output_value);
 
   if (gpio_info.direction == gpiod::line::direction::INPUT) {
     settings.set_edge_detection(gpiod::line::edge::BOTH);
@@ -127,7 +126,7 @@ gpiod::line_settings GPIODriver::GenerateLineSettings(const GPIOInfo & gpio_info
 
 void GPIODriver::ChangePinDirection(const GPIOPin pin, const gpiod::line::direction direction)
 {
-  std::unique_lock lock(gpio_info_storage_mutex_);
+  std::lock_guard lock(gpio_info_storage_mutex_);
   GPIOInfo & gpio_info = GetGPIOInfoRef(pin);
 
   if (gpio_info.direction == direction) {
@@ -147,14 +146,11 @@ void GPIODriver::ChangePinDirection(const GPIOPin pin, const gpiod::line::direct
   gpio_info.value = line_request_->get_value(gpio_info.offset);
 }
 
-bool GPIODriver::IsPinAvaible(const GPIOPin pin) const
+bool GPIODriver::IsPinAvailable(const GPIOPin pin) const
 {
-  for (auto & info : gpio_info_storage_) {
-    if (info.pin == pin) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(gpio_info_storage_.begin(), gpio_info_storage_.end(), [&](const auto & info) {
+    return info.pin == pin;
+  });
 }
 
 bool GPIODriver::IsPinActive(const GPIOPin pin)
@@ -163,7 +159,7 @@ bool GPIODriver::IsPinActive(const GPIOPin pin)
     throw std::runtime_error("GPIO monitor thread is not running!");
   }
 
-  std::unique_lock lock(gpio_info_storage_mutex_);
+  std::lock_guard lock(gpio_info_storage_mutex_);
   const GPIOInfo & pin_info = GetGPIOInfoRef(pin);
   return pin_info.value == gpiod::line::value::ACTIVE;
 }
@@ -178,7 +174,7 @@ bool GPIODriver::SetPinValue(const GPIOPin pin, const bool value)
 
   gpiod::line::value gpio_value = value ? gpiod::line::value::ACTIVE : gpiod::line::value::INACTIVE;
 
-  std::unique_lock lock(gpio_info_storage_mutex_);
+  std::lock_guard lock(gpio_info_storage_mutex_);
   try {
     line_request_->set_value(gpio_info.offset, gpio_value);
 
@@ -192,8 +188,8 @@ bool GPIODriver::SetPinValue(const GPIOPin pin, const bool value)
     }
 
     return true;
-  } catch (const std::exception & err) {
-    std::cerr << "Error while setting GPIO pin value: " << err.what() << std::endl;
+  } catch (const std::exception & e) {
+    std::cerr << "Error while setting GPIO pin value: " << e.what() << std::endl;
     return false;
   }
 }
@@ -205,7 +201,7 @@ void GPIODriver::GPIOMonitorOn()
   }
 
   {
-    std::unique_lock lock(gpio_info_storage_mutex_);
+    std::lock_guard lock(gpio_info_storage_mutex_);
     for (auto & info : gpio_info_storage_) {
       info.value = line_request_->get_value(info.offset);
     }
@@ -226,14 +222,10 @@ void GPIODriver::GPIOMonitorOn()
 void GPIODriver::MonitorAsyncEvents()
 {
   if (use_rt_) {
-    ConfigureRt();
+    panther_utils::ConfigureRT(gpio_monit_thread_sched_priority_);
   }
 
   auto edge_event_buffer = gpiod::edge_event_buffer(edge_event_buffer_size_);
-
-  struct pollfd pollfd;
-  pollfd.fd = line_request_->fd();
-  pollfd.events = POLLIN;
 
   {
     std::unique_lock<std::mutex> lck(monitor_init_mtx_);
@@ -241,48 +233,24 @@ void GPIODriver::MonitorAsyncEvents()
   }
 
   while (gpio_monitor_thread_enabled_) {
-    auto ret = poll(&pollfd, 1, -1);
+    if (line_request_->wait_edge_events(std::chrono::milliseconds(10))) {
+      line_request_->read_edge_events(edge_event_buffer);
 
-    if (ret == -1) {
-      throw std::runtime_error("Error waiting for edge events.");
+      for (const auto & event : edge_event_buffer) {
+        HandleEdgeEvent(event);
+      }
     }
-
-    line_request_->read_edge_events(edge_event_buffer);
-
-    for (const auto & event : edge_event_buffer) {
-      HandleEdgeEvent(event);
-    }
-  }
-}
-
-void GPIODriver::ConfigureRt()
-{
-  if (gpio_monit_thread_sched_priority_ > 99) {
-    throw std::runtime_error(
-      "Invalid priority value. Please set a value between 0 and 99 for RT scheduling (GPIO monitor "
-      "thread)");
-  }
-
-  if (!realtime_tools::has_realtime_kernel()) {
-    throw std::runtime_error("Real-time kernel is not available (GPIO monitor thread)");
-  }
-
-  if (!realtime_tools::configure_sched_fifo(gpio_monit_thread_sched_priority_)) {
-    std::cerr << "Could not enable FIFO RT scheduling policy (GPIO monitor thread)" << std::endl;
-  } else {
-    std::cout << "FIFO RT scheduling policy with priority " << gpio_monit_thread_sched_priority_
-              << " set (GPIO monitor thread) " << std::endl;
   }
 }
 
 void GPIODriver::HandleEdgeEvent(const gpiod::edge_event & event)
 {
-  std::unique_lock lock(gpio_info_storage_mutex_);
+  std::lock_guard lock(gpio_info_storage_mutex_);
   GPIOPin pin;
   try {
     pin = GetPinFromOffset(event.line_offset());
-  } catch (const std::out_of_range & err) {
-    std::cerr << "An edge event occurred with an unknown pin: " << err.what() << std::endl;
+  } catch (const std::out_of_range & e) {
+    std::cerr << "An edge event occurred with an unknown pin: " << e.what() << std::endl;
     return;
   }
 
@@ -324,7 +292,7 @@ GPIOInfo & GPIODriver::GetGPIOInfoRef(const GPIOPin pin)
     }
   }
 
-  throw std::runtime_error("Pin not found in GPIO info storage.");
+  throw std::invalid_argument("Pin not found in GPIO info storage.");
 }
 
 GPIOPin GPIODriver::GetPinFromOffset(const gpiod::line::offset & offset) const

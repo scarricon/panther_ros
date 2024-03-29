@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 #define PANTHER_HARDWARE_INTERFACES_ROBOTEQ_ERROR_FILTER_HPP_
 
 #include <atomic>
+#include <map>
+#include <string>
 
 namespace panther_hardware_interfaces
 {
@@ -31,28 +33,29 @@ public:
    * @brief Updates the error count, if the number of consecutive errors exceeds the max
    * threshold error is set
    */
-  void UpdateError(const bool current_error)
-  {
-    if (current_error) {
-      ++current_error_count_;
-      if (current_error_count_ >= max_error_count_) {
-        error_ = true;
-      }
-    } else {
-      current_error_count_ = 0;
-    }
-  }
+  void UpdateError(const bool current_error);
 
-  void ClearError()
-  {
-    error_ = false;
-    current_error_count_ = 0;
-  }
+  void ClearError();
 
 private:
   const unsigned max_error_count_;
   unsigned current_error_count_ = 0;
   bool error_ = false;
+};
+
+enum class ErrorsFilterIds {
+  WRITE_PDO_CMDS = 0,
+  READ_PDO_MOTOR_STATES,
+  READ_PDO_DRIVER_STATE,
+  ROBOTEQ_DRIVER,
+};
+
+// Mapping of all possible error filter ids to their respective names.
+const std::map<ErrorsFilterIds, std::string> error_filter_id_names = {
+  {ErrorsFilterIds::WRITE_PDO_CMDS, "WRITE_PDO_CMDS"},
+  {ErrorsFilterIds::READ_PDO_MOTOR_STATES, "READ_PDO_MOTOR_STATES"},
+  {ErrorsFilterIds::READ_PDO_DRIVER_STATE, "READ_PDO_DRIVER_STATE"},
+  {ErrorsFilterIds::ROBOTEQ_DRIVER, "ROBOTEQ_DRIVER"},
 };
 
 /**
@@ -64,28 +67,26 @@ private:
 class RoboteqErrorFilter
 {
 public:
-  RoboteqErrorFilter(const std::vector<ErrorFilter> & error_filters) : error_filters_(error_filters)
-  {
-  }
+  RoboteqErrorFilter(
+    const unsigned max_write_pdo_cmds_errors_count,
+    const unsigned max_read_pdo_motor_states_errors_count,
+    const unsigned max_read_pdo_driver_state_errors_count,
+    const unsigned max_roboteq_driver_error_count);
 
-  bool IsError() const
-  {
-    return std::any_of(error_filters_.begin(), error_filters_.end(), [](const auto & filter) {
-      return filter.IsError();
-    });
-  };
+  bool IsError() const;
 
-  bool IsError(const std::size_t id) const { return error_filters_[id].IsError(); };
+  bool IsError(const ErrorsFilterIds id) const { return error_filters_.at(id).IsError(); };
 
   /**
    * @brief Updates error count, if the number of consecutive errors exceeds the max
    * threshold error is set
    */
-  void UpdateError(const std::size_t id, const bool current_error)
-  {
-    ClearErrorsIfFlagSet();
-    error_filters_[id].UpdateError(current_error);
-  }
+  void UpdateError(const ErrorsFilterIds id, const bool current_error);
+
+  /**
+   * @brief Returns a map of all errors, with their respective names and values.
+   */
+  std::map<std::string, bool> GetErrorMap() const;
 
   /**
    * @brief Sets clear errors flag - errors will be cleared upon the next Update (any) method.
@@ -94,18 +95,11 @@ public:
   void SetClearErrorsFlag() { clear_errors_.store(true); }
 
 private:
-  void ClearErrorsIfFlagSet()
-  {
-    if (clear_errors_) {
-      std::for_each(
-        error_filters_.begin(), error_filters_.end(), [](auto & filter) { filter.ClearError(); });
-      clear_errors_.store(false);
-    }
-  }
+  void ClearErrorsIfFlagSet();
 
   std::atomic_bool clear_errors_ = false;
 
-  std::vector<ErrorFilter> error_filters_;
+  std::map<ErrorsFilterIds, ErrorFilter> error_filters_;
 };
 
 }  // namespace panther_hardware_interfaces

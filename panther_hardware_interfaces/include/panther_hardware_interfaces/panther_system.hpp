@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,26 +15,29 @@
 #ifndef PANTHER_HARDWARE_INTERFACES_PANTHER_SYSTEM_HPP_
 #define PANTHER_HARDWARE_INTERFACES_PANTHER_SYSTEM_HPP_
 
+#include <array>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
+#include "diagnostic_updater/diagnostic_status_wrapper.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
+#include "rclcpp_lifecycle/state.hpp"
 
-#include <rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp>
-#include <rclcpp_lifecycle/state.hpp>
+#include "hardware_interface/handle.hpp"
+#include "hardware_interface/system_interface.hpp"
+#include "hardware_interface/types/hardware_interface_return_values.hpp"
 
-#include <hardware_interface/handle.hpp>
-#include <hardware_interface/system_interface.hpp>
-#include <hardware_interface/types/hardware_interface_return_values.hpp>
-
-#include <panther_hardware_interfaces/gpio_controller.hpp>
-#include <panther_hardware_interfaces/motors_controller.hpp>
-#include <panther_hardware_interfaces/panther_system_ros_interface.hpp>
-#include <panther_hardware_interfaces/roboteq_error_filter.hpp>
+#include "panther_hardware_interfaces/gpio_controller.hpp"
+#include "panther_hardware_interfaces/motors_controller.hpp"
+#include "panther_hardware_interfaces/panther_system_ros_interface.hpp"
+#include "panther_hardware_interfaces/roboteq_error_filter.hpp"
 
 namespace panther_hardware_interfaces
 {
+
 using return_type = hardware_interface::return_type;
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 using StateInterface = hardware_interface::StateInterface;
@@ -59,26 +62,42 @@ public:
   std::vector<StateInterface> export_state_interfaces() override;
   std::vector<CommandInterface> export_command_interfaces() override;
 
-  return_type read(const rclcpp::Time & /* time */, const rclcpp::Duration & /* period */) override;
+  return_type read(const rclcpp::Time & time, const rclcpp::Duration & /* period */) override;
   return_type write(
     const rclcpp::Time & /* time */, const rclcpp::Duration & /* period */) override;
 
 protected:
   void CheckJointSize() const;
-  void SortJointNames();
-  void CheckJointNames() const;
+  void SortAndCheckJointNames();
   void SetInitialValues();
   void CheckInterfaces() const;
   void ReadPantherVersion();
   void ReadDrivetrainSettings();
-  void ReadCanOpenSettings();
+  void ReadCANopenSettings();
   void ReadInitializationActivationAttempts();
   void ReadParametersAndCreateRoboteqErrorFilter();
+  void ReadDriverStatesUpdateFrequency();
+
+  void UpdateMotorsStates();
+  void UpdateDriverState();
 
   void UpdateHwStates();
-  void UpdateDriverState();
-  void UpdateSystemFeedback();
-  void UpdateMsgErrors();
+  void UpdateMotorsStatesDataTimedOut();
+
+  void UpdateDriverStateMsg();
+  void UpdateFlagErrors();
+  void UpdateDriverStateDataTimedOut();
+
+  void HandlePDOWriteOperation(std::function<void()> pdo_write_operation);
+  bool AreVelocityCommandsNearZero();
+
+  void MotorsPowerEnable(const bool enable);
+  void SetEStop();
+  void ResetEStop();
+  std::function<bool()> ReadEStop;
+
+  void DiagnoseErrors(diagnostic_updater::DiagnosticStatusWrapper & status);
+  void DiagnoseStatus(diagnostic_updater::DiagnosticStatusWrapper & status);
 
   static constexpr size_t kJointsSize = 4;
 
@@ -102,9 +121,9 @@ protected:
   std::shared_ptr<MotorsController> motors_controller_;
 
   DrivetrainSettings drivetrain_settings_;
-  CanOpenSettings canopen_settings_;
+  CANopenSettings canopen_settings_;
 
-  PantherSystemRosInterface panther_system_ros_interface_;
+  std::unique_ptr<PantherSystemRosInterface> panther_system_ros_interface_;
 
   // Sometimes SDO errors can happen during initialization and activation of Roboteq drivers,
   // in these cases it is better to retry
@@ -113,30 +132,24 @@ protected:
   // node 02: SDO protocol timed out
   // SDO abort code 05040000 received on upload request of sub-object 1018:01 (Vendor-ID) to
   // node 02: SDO protocol timed out
-  unsigned max_roboteq_initialization_attempts_ = 2;
-  unsigned max_roboteq_activation_attempts_ = 2;
-
-  // SDO error can happen also during setting safety stop (it may be not necessary to use attempts
-  // once we have GPIO controller)
-  unsigned max_safety_stop_attempts_ = 20;
+  unsigned max_roboteq_initialization_attempts_;
+  unsigned max_roboteq_activation_attempts_;
 
   rclcpp::Logger logger_{rclcpp::get_logger("PantherSystem")};
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 
   std::shared_ptr<RoboteqErrorFilter> roboteq_error_filter_;
-  enum class ErrorsFilterIds { READ_SDO = 0, WRITE_SDO = 1, READ_PDO = 2, ROBOTEQ_DRIVER = 3 };
 
   float panther_version_;
 
-  std::mutex motor_controller_write_mtx_;
-  std::atomic_bool estop_ = true;
+  std::atomic_bool e_stop_ = true;
+  std::atomic_bool use_can_for_e_stop_trigger_ = false;
   std::atomic_bool last_commands_zero_ = false;
+  std::mutex e_stop_manipulation_mtx_;
+  std::mutex motor_controller_write_mtx_;
 
-  bool AreVelocityCommandsNearZero();
-
-  void SetEStop();
-  void ResetEStop();
-  bool ReadEStop();
+  rclcpp::Time next_driver_state_update_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Duration driver_states_update_period_{0, 0};
 };
 
 }  // namespace panther_hardware_interfaces

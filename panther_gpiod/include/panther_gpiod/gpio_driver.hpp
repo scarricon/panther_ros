@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@
 #include <thread>
 #include <vector>
 
-#include <gpiod.hpp>
+#include "gpiod.hpp"
 
 namespace panther_gpiod
 {
@@ -145,6 +145,8 @@ public:
    *
    * @param callback The callback function to handle GPIO edge events.
    *
+   * @throws std::runtime_error if GPIO monitor thread is not running.
+   *
    * @par Example
    * An example of using this method to bind a member function as a callback:
    * @code{.cpp}
@@ -158,6 +160,7 @@ public:
    *
    * MyClass my_obj;
    * GPIODriver gpio_driver;
+   * gpio_driver.GPIOMonitorEnable(true, 50);
    * gpio_driver.ConfigureEdgeEventCallback(
    *     std::bind(&MyClass::HandleGPIOEvent, &my_obj, std::placeholders::_1));
    * @endcode
@@ -178,7 +181,7 @@ public:
    * @param pin The GPIO pin to check availability for
    * @return true if the pin is available, false otherwise
    */
-  bool IsPinAvaible(const GPIOPin pin) const;
+  bool IsPinAvailable(const GPIOPin pin) const;
 
   /**
    * @brief Checks if a specific GPIO pin is active. This method returns the value stored in the
@@ -213,7 +216,6 @@ private:
   void ConfigureLineRequest(
     gpiod::chip & chip, gpiod::request_builder & builder, GPIOInfo & gpio_info);
   void MonitorAsyncEvents();
-  void ConfigureRt();
   void HandleEdgeEvent(const gpiod::edge_event & event);
   bool IsGPIOMonitorThreadRunning() const;
 
@@ -257,7 +259,8 @@ private:
     {GPIOPin::STAGE2_INPUT, "STAGE2_INPUT"},
     {GPIOPin::VDIG_OFF, "VDIG_OFF"},
     {GPIOPin::VMOT_ON, "VMOT_ON"},
-    {GPIOPin::MOTOR_ON, "MOTOR_ON"}};
+    {GPIOPin::MOTOR_ON, "MOTOR_ON"},
+  };
 
   /**
    * @brief Vector containing GPIO pin configuration information such as pin direction, value, etc.

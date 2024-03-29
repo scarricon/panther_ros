@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <panther_hardware_interfaces/utils.hpp>
+#include "panther_hardware_interfaces/utils.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -40,6 +40,28 @@ bool OperationWithAttempts(
     }
   }
   return false;
+}
+
+bool CheckIfJointNameContainValidSequence(const std::string & name, const std::string & sequence)
+{
+  const std::size_t pos = name.find(sequence);
+  if (pos == std::string::npos) {
+    return false;
+  }
+
+  if (pos >= 1) {
+    const std::size_t id_before_sequence = pos - 1;
+    if (name[id_before_sequence] != '_' && name[id_before_sequence] != '/') {
+      return false;
+    }
+  }
+
+  const std::size_t id_after_sequence = pos + sequence.length();
+  if (id_after_sequence < name.length() && name[id_after_sequence] != '_') {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace panther_hardware_interfaces

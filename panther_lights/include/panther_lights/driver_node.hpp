@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@
 #include <memory>
 #include <string>
 
-#include <rclcpp/rclcpp.hpp>
+#include "diagnostic_updater/diagnostic_updater.hpp"
+#include "image_transport/image_transport.hpp"
+#include "rclcpp/rclcpp.hpp"
 
-#include <image_transport/image_transport.hpp>
+#include "panther_msgs/srv/set_led_brightness.hpp"
 
-#include <panther_msgs/srv/set_led_brightness.hpp>
-
-#include <panther_gpiod/gpio_driver.hpp>
-#include <panther_lights/apa102.hpp>
+#include "panther_gpiod/gpio_driver.hpp"
+#include "panther_lights/apa102.hpp"
 
 namespace panther_lights
 {
@@ -41,6 +41,13 @@ public:
 
   void Initialize();
 
+protected:
+  int num_led_;
+  double frame_timeout_;
+  bool panels_initialised_ = false;
+  rclcpp::Time chanel_1_ts_;
+  rclcpp::Time chanel_2_ts_;
+
 private:
   void OnShutdown();
   void FrameCB(
@@ -50,21 +57,17 @@ private:
     const SetLEDBrightnessSrv::Request::SharedPtr & request,
     SetLEDBrightnessSrv::Response::SharedPtr response);
   void SetPowerPin(const bool value);
+  void DiagnoseLigths(diagnostic_updater::DiagnosticStatusWrapper & status);
 
-  int num_led_;
-  double frame_timeout_;
-  bool panels_initialised_ = false;
+  apa102::APA102 chanel_1_;
+  apa102::APA102 chanel_2_;
 
-  apa102::APA102 front_panel_;
-  apa102::APA102 rear_panel_;
-
-  rclcpp::Time front_panel_ts_;
-  rclcpp::Time rear_panel_ts_;
   rclcpp::Service<SetLEDBrightnessSrv>::SharedPtr set_brightness_server_;
   std::shared_ptr<image_transport::ImageTransport> it_;
-  std::shared_ptr<image_transport::Subscriber> rear_light_sub_;
-  std::shared_ptr<image_transport::Subscriber> front_light_sub_;
+  std::shared_ptr<image_transport::Subscriber> chanel_2_sub_;
+  std::shared_ptr<image_transport::Subscriber> chanel_1_sub_;
   std::unique_ptr<panther_gpiod::GPIODriver> gpio_driver_;
+  diagnostic_updater::Updater diagnostic_updater_;
 };
 
 }  // namespace panther_lights

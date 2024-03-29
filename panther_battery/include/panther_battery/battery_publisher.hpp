@@ -1,4 +1,4 @@
-// Copyright 2023 Husarion sp. z o.o.
+// Copyright 2024 Husarion sp. z o.o.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@
 
 #include <memory>
 
-#include <rclcpp/rclcpp.hpp>
+#include "diagnostic_updater/diagnostic_updater.hpp"
+#include "rclcpp/rclcpp.hpp"
 
-#include <sensor_msgs/msg/battery_state.hpp>
+#include "sensor_msgs/msg/battery_state.hpp"
 
-#include <panther_msgs/msg/io_state.hpp>
+#include "panther_msgs/msg/io_state.hpp"
 
 namespace panther_battery
 {
@@ -32,7 +33,9 @@ using IOStateMsg = panther_msgs::msg::IOState;
 class BatteryPublisher
 {
 public:
-  BatteryPublisher(const rclcpp::Node::SharedPtr & node);
+  BatteryPublisher(
+    const rclcpp::Node::SharedPtr & node,
+    const std::shared_ptr<diagnostic_updater::Updater> & diagnostic_updater);
 
   ~BatteryPublisher() {}
 
@@ -43,12 +46,14 @@ protected:
   virtual void Reset() = 0;
   virtual void PublishBatteryState() = 0;
   virtual void LogErrors() = 0;
+  virtual void DiagnoseBattery(diagnostic_updater::DiagnosticStatusWrapper & status) = 0;
 
   bool TimeoutReached() const;
   void BatteryStatusLogger(const BatteryStateMsg & battery_state) const;
   bool ChargerConnected() const;
 
   rclcpp::Node::SharedPtr node_;
+  std::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
 
 private:
   bool charger_connected_;
