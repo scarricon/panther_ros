@@ -314,30 +314,6 @@ return_type PantherSystem::write(
     });
   }
 
-  if (!estop_) {
-    try {
-      {
-        std::unique_lock<std::mutex> motor_controller_write_lck(
-          motor_controller_write_mtx_, std::defer_lock);
-        if (!motor_controller_write_lck.try_lock()) {
-          throw std::runtime_error(
-            "Can't acquire mutex for writing commands - estop is being triggered");
-        }
-
-        motors_controller_->WriteSpeed(
-          hw_commands_velocities_[0], hw_commands_velocities_[1], hw_commands_velocities_[2],
-          hw_commands_velocities_[3]);
-      }
-
-      roboteq_error_filter_->UpdateError(
-        static_cast<std::size_t>(ErrorsFilterIds::WRITE_SDO), false);
-    } catch (const std::runtime_error & e) {
-      RCLCPP_ERROR_STREAM(logger_, "Error when trying to write commands: " << e.what());
-      roboteq_error_filter_->UpdateError(
-        static_cast<std::size_t>(ErrorsFilterIds::WRITE_SDO), true);
-    }
-  }
-
   return return_type::OK;
 }
 
