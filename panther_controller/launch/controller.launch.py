@@ -139,7 +139,6 @@ def generate_launch_description():
     )
     robot_description = {"robot_description": robot_description_content}
 
-    # TODO: namespace instead of remap to /panther
     control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -214,7 +213,6 @@ def generate_launch_description():
 
     imu_broadcaster_spawner = Node(
         package="controller_manager",
-        name="imu_broadcaster",
         executable="spawner",
         arguments=[
             "imu_broadcaster",
@@ -233,7 +231,7 @@ def generate_launch_description():
     delay_imu_broadcaster_spawner_after_robot_controller_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=robot_controller_spawner,
-            on_exit=[imu_broadcaster_spawner,relay_imu,relay_odom],
+            on_exit=[imu_broadcaster_spawner],
         ),
         condition=IfCondition(use_sim),
     )

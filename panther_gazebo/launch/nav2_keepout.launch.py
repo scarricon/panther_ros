@@ -133,7 +133,7 @@ def generate_launch_description():
 
     declare_wheel_type_arg = DeclareLaunchArgument(
         "wheel_type",
-        default_value="custom",
+        default_value="WH01",
         description=(
             "Specify the type of wheel. If you select a value from the provided options ('WH01',"
             " 'WH02', 'WH04'), you can disregard the 'wheel_config_path' and"
