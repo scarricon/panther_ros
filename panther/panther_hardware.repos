@@ -2,12 +2,7 @@ repositories:
   panther_msgs:
     type: git
     url: https://github.com/husarion/panther_msgs.git
-    version: ros2-control
-  # mecanum controller
-  rosbot_controllers:
-    type: git
-    url: https://github.com/husarion/rosbot_controllers.git
-    version: main
+    version: ros2
   joy2twist:
     type: git
     url: https://github.com/husarion/joy2twist.git
