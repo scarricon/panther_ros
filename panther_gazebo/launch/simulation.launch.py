@@ -23,7 +23,7 @@ from launch.substitutions import (
     PathJoinSubstitution,
     PythonExpression,
 )
-from launch_ros.actions import Node, SetParameter
+from launch_ros.actions import SetParameter
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -101,7 +101,7 @@ def generate_launch_description():
                 "gz_bridge.yaml",
             ]
         ),
-        description="Path to the parameter_bridge configuration file",
+        description="Path to the parameter_bridge configuration file.",
     )
 
     world_cfg = LaunchConfiguration("world")
@@ -132,18 +132,17 @@ def generate_launch_description():
         "pose_y",
         default_value=["13.0"],
         description="Initial robot position in the global 'y' axis.",
+
     )
 
-    pose_z = LaunchConfiguration("pose_z")
-    declare_pose_z_arg = DeclareLaunchArgument(
-        "pose_z",
-        default_value=["0.2"],
-        description="Initial robot position in the global 'z' axis.",
+    pitch = LaunchConfiguration("pitch")
+    declare_pitch_arg = DeclareLaunchArgument(
+        "pitch", default_value="0.0", description="Initial robot 'pitch' orientation."
     )
 
-    rot_yaw = LaunchConfiguration("rot_yaw")
-    declare_rot_yaw_arg = DeclareLaunchArgument(
-        "rot_yaw", default_value=["0.0"], description="Initial robot orientation."
+    yaw = LaunchConfiguration("yaw")
+    declare_yaw_arg = DeclareLaunchArgument(
+        "yaw", default_value="0.0", description="Initial robot 'yaw' orientation."
     )
 
     publish_robot_state = LaunchConfiguration("publish_robot_state")
@@ -160,14 +159,34 @@ def generate_launch_description():
     declare_namespace_arg = DeclareLaunchArgument(
         "namespace",
         default_value=EnvironmentVariable("ROBOT_NAMESPACE", default_value=""),
-        description="Namespace for all Panther topics",
+        description="Add namespace to all launched nodes.",
+    )
+
+    robots = LaunchConfiguration("robots")
+    declare_robots_arg = DeclareLaunchArgument(
+        "robots",
+        default_value=[],
+        description=(
+            "The list of the robots spawned in the simulation e. g. robots:='robot1={x: 0.0, y:"
+            " -1.0}; robot2={x: 1.0, y: -1.0}'"
+        ),
+    )
+
+    add_world_transform = LaunchConfiguration("add_world_transform")
+    declare_add_world_transform_arg = DeclareLaunchArgument(
+        "add_world_transform",
+        default_value="False",
+        description=(
+            "Adds a world frame that connects the tf trees of individual robots (useful when running"
+            " multiple robots)."
+        ),
     )
 
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    FindPackageShare("ros_gz_sim"),
+                    FindPackageShare("husarion_gz_worlds"),
                     "launch",
                     "gz_sim.launch.py",
                 ]
@@ -212,9 +231,9 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    FindPackageShare("panther_bringup"),
+                    FindPackageShare("panther_gazebo"),
                     "launch",
-                    "bringup.launch.py",
+                    "spawn.launch.py",
                 ]
             )
         ),
@@ -223,12 +242,17 @@ def generate_launch_description():
             "wheel_config_path": wheel_config_path,
             "controller_config_path": controller_config_path,
             "battery_config_path": battery_config_path,
+            "gz_bridge_config_path": gz_bridge_config_path,
+            "x": x,
+            "y": y,
+            "z": z,
+            "roll": roll,
+            "pitch": pitch,
+            "yaw": yaw,
             "publish_robot_state": publish_robot_state,
-            "use_sim": "True",
-            "simulation_engine": "ignition-gazebo",
             "namespace": namespace,
-            "use_arm": "False",
-            "use_ekf": "True",
+            "robots": robots,
+            "add_world_transform": add_world_transform,
         }.items(),
     )
 
@@ -268,11 +292,12 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            declare_world_arg,
-            declare_pose_x_arg,
-            declare_pose_y_arg,
-            declare_pose_z_arg,
-            declare_rot_yaw_arg,
+            declare_x_arg,
+            declare_y_arg,
+            declare_z_arg,
+            declare_roll_arg,
+            declare_pitch_arg,
+            declare_yaw_arg,
             declare_wheel_type_arg,
             declare_wheel_config_path_arg,
             declare_controller_config_path_arg,
@@ -280,6 +305,8 @@ def generate_launch_description():
             declare_gz_bridge_config_path_arg,
             declare_publish_robot_state_arg,
             declare_namespace_arg,
+            declare_robots_arg,
+            declare_add_world_transform_arg,
             # Sets use_sim_time for all nodes started below (doesn't work for nodes started from ignition gazebo)
             SetParameter(name="use_sim_time", value=True),
             gz_sim,
