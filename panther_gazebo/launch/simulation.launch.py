@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription,TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     EnvironmentVariable,
@@ -38,7 +38,7 @@ def generate_launch_description():
             " 'controller_config_path' parameters. If you have custom wheels, set this parameter"
             " to 'CUSTOM' and provide the necessary configurations."
         ),
-        choices=["WH01", "WH02", "WH04", "CUSTOM"],
+        choices=["WH01", "WH02", "WH04", "custom"],
     )
 
     wheel_config_path = LaunchConfiguration("wheel_config_path")
@@ -104,24 +104,35 @@ def generate_launch_description():
         description="Path to the parameter_bridge configuration file.",
     )
 
-    x = LaunchConfiguration("x")
-    declare_x_arg = DeclareLaunchArgument(
-        "x", default_value="5.0", description="Initial robot position in the global 'x' axis."
+    world_cfg = LaunchConfiguration("world")
+    declare_world_arg = DeclareLaunchArgument(
+        "world",
+        default_value=[
+            "-r ",
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("icon_sites_gz"),
+                    "worlds",
+                    "house_phoenix_world.sdf",
+                ],
+            ),
+        ],
+        description="SDF world file",
     )
 
-    y = LaunchConfiguration("y")
-    declare_y_arg = DeclareLaunchArgument(
-        "y", default_value="-5.0", description="Initial robot position in the global 'y' axis."
+    pose_x = LaunchConfiguration("pose_x")
+    declare_pose_x_arg = DeclareLaunchArgument(
+        "pose_x",
+        default_value=["16.5"],
+        description="Initial robot position in the global 'x' axis.",
     )
 
-    z = LaunchConfiguration("z")
-    declare_z_arg = DeclareLaunchArgument(
-        "z", default_value="0.2", description="Initial robot position in the global 'z' axis."
-    )
+    pose_y = LaunchConfiguration("pose_y")
+    declare_pose_y_arg = DeclareLaunchArgument(
+        "pose_y",
+        default_value=["13.0"],
+        description="Initial robot position in the global 'y' axis.",
 
-    roll = LaunchConfiguration("roll")
-    declare_roll_arg = DeclareLaunchArgument(
-        "roll", default_value="0.0", description="Initial robot 'roll' orientation."
     )
 
     pitch = LaunchConfiguration("pitch")
@@ -181,9 +192,42 @@ def generate_launch_description():
                 ]
             )
         ),
+        launch_arguments={"gz_args": world_cfg}.items(),
     )
 
-    spawn_robots_launch = IncludeLaunchDescription(
+    gz_spawn_entity = Node(
+        package="ros_gz_sim",
+        executable="create",
+        arguments=[
+            "-name",
+            "panther",
+            "-allow_renaming",
+            "true",
+            "-topic",
+            "robot_description",
+            "-x",
+            pose_x,
+            "-y",
+            pose_y,
+            "-z",
+            pose_z,
+            "-Y",
+            rot_yaw,
+        ],
+        output="screen",
+        namespace=namespace,
+    )
+
+    gz_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="gz_bridge",
+        parameters=[{"config_file": gz_bridge_config_path}],
+        namespace=namespace,
+        output="screen",
+    )
+   
+    bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
@@ -212,6 +256,40 @@ def generate_launch_description():
         }.items(),
     )
 
+    # robot_localization_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         PathJoinSubstitution(
+    #             [gps_wpf_dir,
+    #              'launch',
+    #              'ekf_navsat.launch.py'
+    #              ]
+    #             )
+    #     ),
+    #     launch_arguments={
+    #         "use_sim":"True"
+    #     }.items()
+    # )
+
+    lidar_sensor_suite_launch =  IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("lidar_sensor_suite_bringup"),
+                    "launch",
+                    "lidar_sensor_suite.launch.py",
+                ]
+            )
+        )
+    )
+
+    other_action_timer = TimerAction(
+        period=10.0,
+        actions=[
+            lidar_sensor_suite_launch,
+            # robot_localization_cmd,
+        ],
+    )
+
     return LaunchDescription(
         [
             declare_x_arg,
@@ -232,6 +310,9 @@ def generate_launch_description():
             # Sets use_sim_time for all nodes started below (doesn't work for nodes started from ignition gazebo)
             SetParameter(name="use_sim_time", value=True),
             gz_sim,
-            spawn_robots_launch,
+            gz_bridge,
+            gz_spawn_entity,
+            bringup_launch,
+            other_action_timer,
         ]
     )

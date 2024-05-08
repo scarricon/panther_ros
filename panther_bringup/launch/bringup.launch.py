@@ -181,6 +181,13 @@ def generate_launch_description():
         description="Enable or disable EKF",
     )
 
+    use_arm = LaunchConfiguration("use_arm")
+    declare_use_arm_arg = DeclareLaunchArgument(
+        "use_arm",
+        default_value="False",
+        description="Enable or disable UR arm",
+    )
+
     ekf_config_path = LaunchConfiguration("ekf_config_path")
     declare_ekf_config_path_arg = DeclareLaunchArgument(
         "ekf_config_path",

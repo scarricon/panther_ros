@@ -228,7 +228,7 @@ void GPIODriver::MonitorAsyncEvents()
   auto edge_event_buffer = gpiod::edge_event_buffer(edge_event_buffer_size_);
 
   {
-    std::lock_guard<std::mutex> lck(monitor_init_mtx_);
+    std::unique_lock<std::mutex> lck(monitor_init_mtx_);
     monitor_init_cond_var_.notify_all();
   }
 

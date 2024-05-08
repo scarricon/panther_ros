@@ -46,6 +46,13 @@ def generate_launch_description():
         description="Whether simulation is used",
     )
 
+    use_arm = LaunchConfiguration("use_arm")
+    declare_use_arm_arg = DeclareLaunchArgument(
+        "use_arm",
+        default_value="False",
+        description="Whether simulation is used",
+    )
+
     wheel_config_path = LaunchConfiguration("wheel_config_path")
     declare_wheel_config_path_arg = DeclareLaunchArgument(
         "wheel_config_path",
@@ -231,9 +238,11 @@ def generate_launch_description():
         ),
     )
 
+
     actions = [
         declare_panther_version_arg,
         declare_use_sim_arg,
+        declare_use_arm_arg,
         declare_wheel_config_path_arg,
         declare_controller_config_path_arg,
         declare_battery_config_path_arg,

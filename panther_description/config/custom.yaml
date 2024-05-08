@@ -1,0 +1,11 @@
+wheel_radius: 0.163
+wheel_separation: 0.697
+mass: 3.26
+inertia: { ixx: 0.011585, iyy: 0.019796, izz: 0.011585 }
+inertia_y_offset: 0.0
+mesh_package: panther_description
+folder_path: meshes/custom
+kinematics: differential
+
+# Values measured experimentally
+odom_stderr: { vel_x: 3.2e-3, vel_y: 1.4e-3, vel_yaw: 8.5e-3 }
